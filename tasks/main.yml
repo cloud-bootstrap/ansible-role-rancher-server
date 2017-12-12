@@ -25,7 +25,7 @@
 
 - name: Start the Rancher server container
   docker_container:
-    name: {{ server_name }}
+    name: "{{ server_name }}"
     image: "{{ rancher_server_image }}:{{ rancher_server_version }}"
     state: started
     restart_policy: always
