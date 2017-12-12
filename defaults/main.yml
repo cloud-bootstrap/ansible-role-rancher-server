@@ -1,0 +1,5 @@
+---
+server_name: rancher-server
+rancher_server_image: rancher/server
+rancher_server_version: 1.6.12
+rancher_server_timezone: Australia/Sydney

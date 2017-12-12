@@ -1,0 +1,47 @@
+---
+- name: Determine if we are already running the server
+  shell: "docker ps | grep rancher/server"
+  register: server_running
+  ignore_errors: true
+  changed_when: false
+
+- name: Stop the rancher server
+  docker_container:
+    name: "{{ server_name }}"
+    state: stopped
+  when: server_running|success
+
+- name: remove any previous rancher server (to avoid conflict)
+  docker_container:
+    name: "{{ server_name }}"
+    state: absent
+  when: not server_running|success
+
+- name: Get the cloud ip address
+  uri:
+    url: "http://169.254.169.254/latest/meta-data/local-ipv4"
+    return_content: yes
+  register: cloud_ip
+
+- name: Start the Rancher server container
+  docker_container:
+    name: {{ server_name }}
+    image: "{{ rancher_server_image }}:{{ rancher_server_version }}"
+    state: started
+    restart_policy: always
+    pull: true
+    ports:
+      - 8080:8080
+      - 9345:9345
+      - 9108:9108
+      - 9109:9109
+    env:
+      CATTLE_USE_LOCAL_ARTIFACTS: false
+      CATTLE_PROMETHEUS_EXPORTER: true
+      JAVA_OPTS: "-Xmx8g"
+      TZ: "{{ rancher_server_timezone }}"
+      HTTP_PROXY: "{{ proxy }}"
+      HTTPS_PROXY: "{{ proxy }}"
+      http_proxy: "{{ proxy }}"
+      https_proxy: "{{ proxy }}"
+    command: --advertise-address {{ cloud_ip.content }} --db-host {{ lookup('env','INPUT_RANCHER_DB_HOST') }} --db-pass {{ lookup('env','INPUT_RANCHER_DB_PASS') }} --db-user {{ lookup('env','INPUT_RANCHER_DB_USER') }} --db-name {{ lookup('env','INPUT_RANCHER_DB_NAME') }}
